@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Games list</title>
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+	<script type="text/javascript">
+		// ---- EDIT HERE ----
+		// Switch the shelves and tab names for your own:
+		var shelfTabs = {
+			"Playing": [[533845]],
+			"Backlog": [[533844], [538650]],
+			"Played": [[533843]]
+		};
+
+		hashWindow = top.window
+
+		function initialHash() {
+			return parseInt(hashWindow.location.hash.substring(1))
+		}
+
+		var settings = {
+			hideEmptyShelves: true,
+			showTabBar: Object.keys(shelfTabs).length > 1,
+			initialTab: initialHash() || 1,
+			root: document.getElementsByTagName("body")[0],
+			shelfGameLimit: 1000000
+		}
+		// --- IGNORE THE REST ---
+		// Unless you want to change something, I don't own you
+		// Go ham
+	</script>
+	<style type="text/css" media="screen">
+		body {
+			margin: 0;
+			background-color: black;
+		}
+
+		.grouvee_container {
+			/* customize grid container div here. eg: width: 500px; */
+			max-width: 90px;
+			margin: 20px;
+		}
+
+		.grouvee_game {
+			/* customize game cover container div here */
+			float: left;
+			width: 90px;
+			height: 90px;
+			padding: 10px 10px 10px 10px;
+			overflow: hidden;
+			display: flex;
+			text-align: center;
+		}
+
+		.grouvee_game>a {
+			margin: auto;
+			text-decoration: none;
+			height: 100%;
+		}
+
+		.grouvee_game>a>img {
+			display: flex;
+			margin: auto;
+			height: 100%;
+		}
+
+		.grouvee_game>a>img:before {
+			font-family: tahoma;
+			font-size: 12px;
+			font-weight: bold;
+			color: black;
+			border: 1px solid black;
+			display: flex;
+			align-items: center;
+			word-wrap: break-word;
+		}
+
+		.grouvee_box {
+			display: flex;
+			flex-wrap: wrap;
+			margin: auto;
+			justify-content: center;
+			flex: 1;
+			margin-top: 0;
+		}
+
+		.grouvee_box>div {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			min-width: 100%;
+		}
+
+		.grouvee_box>div>h2 {
+			font-family: tahoma;
+			min-width: 100%;
+			text-align: center;
+		}
+
+		.grouvee_box>div>h2>a {
+			color: black;
+		}
+
+		.tabcontent {
+			display: flex;
+			justify-content: center;
+			max-width: 1000px;
+			margin: 10px auto;
+		}
+
+		/*Following is edited version of CSS from https://codepen.io/FelipeMartinin/pen/uFnhf*/
+		#tab_bar {
+			font-family: arial, sans-serif;
+			border-bottom: 1px solid white;
+			width: 100%;
+			overflow: hidden;
+			height: 50px;
+			line-height: 50px;
+			display: flex;
+			justify-content: center;
+		}
+
+		#tab_bar>.tabmenu {
+			float: left;
+			background: black;
+			color: whitesmoke;
+			height: 45px;
+			margin: 2px 15px 0;
+			padding: 0 15px;
+			cursor: pointer;
+			text-decoration: none;
+			border-bottom: 3px solid white;
+		}
+
+		#tab_bar>.tabmenu.active {
+			color: #00376D;
+			border-bottom: 3px solid #00376D;
+		}
+	</style>
+	<script type="text/javascript">
+
+		function extractShelfName(text) {
+			return text.split(' ').slice(1, -2).join(' ');
+		}
+		function fixLink(link) {
+			if (link.startsWith("file:///")) {
+				return "https://www.grouvee.com/" + link.substring(8);
+			}
+			return link;
+		}
+
+		function cleanup(widget, hideTabAfterLoad) {
+			widget.firstElementChild.firstElementChild.innerText = extractShelfName(widget.firstElementChild.firstElementChild.innerText);
+			widget.firstElementChild.firstElementChild.href = fixLink(widget.firstElementChild.firstElementChild.href);
+
+			if (settings.hideEmptyShelves && widget.childElementCount == 1) {
+				widget.style = "display:none"
+			}
+
+			if (hideTabAfterLoad) {
+				widget.parentElement.parentElement.style = "display:none";
+			}
+		}
+
+		function addChild(parent, type, className, id, href) {
+			var child = document.createElement(type || "div");
+			if (className) {
+				child.className = className;
+			}
+			if (id) {
+				child.id = id;
+			}
+			if (href) {
+				child.href = href;
+			}
+			parent.appendChild(child);
+			return child;
+		}
+
+		function generateTabPage(grouvee_box, columns, hideTab, column, row) {
+			column = column || 0;
+			row = row || 0;
+
+			if (column > 0 && row == 0) {
+				grouvee_box = addChild(grouvee_box.parentElement, "div", "grouvee_box");
+			}
+
+			var lastWidget = false;
+			var nextRow = row + 1 < columns[column].length ? row + 1 : 0;
+			var nextColumn = nextRow == 0 ? column + 1 : column;
+
+			if (nextColumn >= columns.length) {
+				lastWidget = true;
+			}
+
+			var shelfid = columns[column][row];
+			var widget = addChild(grouvee_box, "div", null, `grouvee_widget_${shelfid}`);
+
+			var script = document.createElement("script");
+			script.src = `https:\/\/www.grouvee.com\/widgets\/shelf\/${shelfid}\/?number=${settings.shelfGameLimit}`;
+			script.type = "text/javascript";
+			script.charset = "utf-8";
+
+			script.addEventListener('load', function () {
+				cleanup(widget, hideTab && lastWidget);
+				if (!lastWidget) {
+					generateTabPage(grouvee_box, columns, hideTab, nextColumn, nextRow)
+				}
+			});
+
+			grouvee_box.appendChild(script);
+			return script;
+		}
+
+		var tabIndex = 1;
+
+		if (settings.showTabBar) {
+			var tabs = addChild(settings.root, "div", null, "tab_bar");
+		}
+
+		function isInitialTab(index) {
+			return index == settings.initialTab
+		}
+
+		for (var tab in shelfTabs) {
+			var tabId = `${tab.toLowerCase()}_games`;
+
+			if (settings.showTabBar) {
+				var tabButtonId = `tb_${tabIndex}`;
+				addChild(tabs, "a", "tabmenu" + (isInitialTab(tabIndex) ? " active" : ""), tabButtonId, `javascript:rudrSwitchTab('${tabButtonId}', '${tabId}');`).appendChild(document.createTextNode(tab));
+			}
+
+			var tabcontent = addChild(settings.root, "div", "tabcontent", tabId);
+
+			generateTabPage(addChild(tabcontent, "div", "grouvee_box"), shelfTabs[tab], !isInitialTab(tabIndex));
+
+			tabIndex++;
+		}
+
+		// Source for below: https://rudrastyh.com/javascript/tabs.html
+		function rudrSwitchTab(rudr_tab_id, rudr_tab_content) {
+			// first of all we get all tab content blocks (I think the best way to get them by class names)
+			var x = document.getElementsByClassName("tabcontent");
+			var i;
+			for (i = 0; i < x.length; i++) {
+				x[i].style.display = 'none'; // hide all tab content
+			}
+			document.getElementById(rudr_tab_content).style.display = 'flex'; // display the content of the tab we need
+
+			// now we get all tab menu items by class names (use the next code only if you need to highlight current tab)
+			var x = document.getElementsByClassName("tabmenu");
+			var i;
+			for (i = 0; i < x.length; i++) {
+				x[i].className = 'tabmenu';
+			}
+			document.getElementById(rudr_tab_id).className = 'tabmenu active';
+
+			hashWindow.location.hash = "#" + rudr_tab_id.substring(3)
+		}
+
+	</script>
+</body>
+
+</html>
